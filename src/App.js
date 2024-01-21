@@ -1,26 +1,43 @@
 import { useState, useEffect } from "react";
+import io from "socket.io-client";
+
+const socket = io("http://localhost:5000", { withCredentials: true });
 
 const App = () => {
-  const [backendData, setBackendData] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("http://localhost:5000/api/data");
-        const data = await response.json();
-        setBackendData(data);
-      } catch (error) {
-        console.error("Error fetching data from the backend:", error);
-      }
-    };
+    socket.on("chat message", (message) => {
+      setMessages((prevMessages) => [...prevMessages, message]);
+    });
 
-    fetchData();
+    return () => {
+      socket.disconnect();
+    };
   }, []);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    socket.emit("chat message", newMessage);
+    setNewMessage("");
+  };
 
   return (
     <div>
-      <h1>React</h1>
-      {backendData && <p>{backendData.message}</p>}
+      <ul>
+        {messages.map((msg, index) => (
+          <li key={index}>{msg}</li>
+        ))}
+      </ul>
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+        />
+        <button type="submit">전송</button>
+      </form>
     </div>
   );
 };
